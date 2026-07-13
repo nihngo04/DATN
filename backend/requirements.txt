@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pillow
+numpy
+python-multipart
+python-dotenv
+httpx
+opencv-python
+rasterio
+scikit-learn
+joblib
+imageio-ffmpeg

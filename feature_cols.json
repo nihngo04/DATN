@@ -1,0 +1,16 @@
+{
+    "feature_cols": [
+        "elevation",
+        "slope",
+        "aspect_sin",
+        "aspect_cos",
+        "lithology",
+        "distance_to_road",
+        "distance_to_river",
+        "landuse",
+        "rainfall",
+        "plan_curvature",
+        "twi"
+    ],
+    "note": "Use these features in exactly this order for raster prediction."
+}

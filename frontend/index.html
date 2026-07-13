@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGIS Sạt Lở Quảng Trị</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <header class="brand">
+                <div class="brand-mark">QT</div>
+                <div>
+                    <h1>WebGIS Sạt Lở</h1>
+                    <span>Quảng Trị</span>
+                </div>
+            </header>
+            <nav class="tabs" aria-label="Menu chức năng">
+                <button class="tab active" data-tab="overview">Tổng thể</button>
+                <button class="tab" data-tab="segmentation">Phân đoạn sạt lở</button>
+                <button class="tab" data-tab="inventory">CSDL sạt lở</button>
+                <button class="tab" data-tab="susceptibility">Bản đồ nhạy cảm</button>
+                <button class="tab" data-tab="settings">Setting</button>
+            </nav>
+        </aside>
+
+        <main class="workspace">
+            <section class="topbar">
+                <div id="status-line">Sẵn sàng</div>
+                <div class="map-controls" data-map-control>
+                    <label><input id="toggle-districts" type="checkbox" checked /> Huyện</label>
+                    <label><input id="toggle-boundary" type="checkbox" checked /> Vùng nghiên cứu</label>
+                    <label><input id="toggle-points" type="checkbox" checked /> Điểm sạt lở</label>
+                    <label><input id="toggle-susceptibility" type="checkbox" checked /> LSM</label>
+                </div>
+            </section>
+
+            <section class="page active" id="page-overview">
+                <aside class="panel narrow">
+                    <h2>Workflow tổng thể</h2>
+                    <ol class="workflow-list">
+                        <li><span>1</span><strong>Predict ảnh</strong><em>Ảnh được resize/pad 512 x 512.</em></li>
+                        <li><span>2</span><strong>Phân đoạn</strong><em>Gọi Cloud Run `/predict-image`.</em></li>
+                        <li><span>3</span><strong>Kiểm kê</strong><em>Điểm mới lấy từ CSV mới, huyện xác định bằng GPKG.</em></li>
+                        <li><span>4</span><strong>LSM</strong><em>Hiển thị bản đồ nhạy cảm thật từ GeoTIFF/PNG.</em></li>
+                    </ol>
+                    <div id="overview-stats" class="metric-grid"></div>
+                </aside>
+                <section class="map-card">
+                    <div id="map"></div>
+                </section>
+            </section>
+
+            <section class="page" id="page-segmentation">
+                <aside class="panel narrow">
+                    <h2>Phân đoạn sạt lở</h2>
+                    <form id="workflow-form">
+                        <label for="upload-file">Ảnh đầu vào</label>
+                        <input id="upload-file" type="file" accept="image/*,.tif,.tiff" />
+                        <label class="check-row">
+                            <input id="update-susceptibility" type="checkbox" checked />
+                            <span>Cập nhật LSM nếu là điểm mới</span>
+                        </label>
+                        <button type="submit">Predict ảnh</button>
+                    </form>
+                    <div class="existing-upload">
+                        <label for="upload-video-file">Video đầu vào</label>
+                        <input id="upload-video-file" type="file" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" />
+                        <button id="run-video" type="button">Predict video</button>
+                    </div>
+                    <div class="existing-upload">
+                        <label for="segment-sample">Ảnh và mask có sẵn trong data/segment</label>
+                        <select id="segment-sample"></select>
+                        <button id="show-segment-sample" type="button">Hiển thị ảnh/mask</button>
+                        <button id="run-segment-sample" type="button">Predict ảnh mẫu</button>
+                    </div>
+                    <div id="workflow-result" class="result-box">Chưa có kết quả.</div>
+                </aside>
+                <section class="analysis-board">
+                    <div class="image-tile">
+                        <h2>Ảnh 512 x 512</h2>
+                        <img id="preprocessed-image" alt="Ảnh 512 x 512" />
+                    </div>
+                    <div class="image-tile">
+                        <h2>Nhãn / Mask</h2>
+                        <img id="mask-image" alt="Mask sạt lở" />
+                    </div>
+                    <div class="image-tile">
+                        <h2>Output phân đoạn</h2>
+                        <img id="output-image" alt="Output phân đoạn" />
+                    </div>
+                    <div class="details-tile">
+                        <h2>Thông tin phát hiện</h2>
+                        <div id="detection-detail">Chưa có kết quả.</div>
+                    </div>
+                    <div class="details-tile video-result">
+                        <h2>Output video</h2>
+                        <video id="output-video" controls></video>
+                        <div id="video-detail"></div>
+                    </div>
+                </section>
+            </section>
+
+            <section class="page" id="page-inventory">
+                <aside class="panel narrow">
+                    <h2>CSDL sạt lở</h2>
+                    <button id="refresh-stats" type="button">Cập nhật thống kê</button>
+                    <button id="create-report" type="button">Xuất báo cáo</button>
+                    <div id="stats-box" class="result-box"></div>
+                    <h3>Theo quy mô</h3>
+                    <div id="scale-stats" class="compact-list"></div>
+                </aside>
+                <section class="table-card">
+                    <h2>Bảng dữ liệu kiểm kê</h2>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Huyện</th>
+                                    <th>Xã</th>
+                                    <th>Thôn</th>
+                                    <th>Diện tích</th>
+                                    <th>Quy mô</th>
+                                    <th>Ngày ghi nhận</th>
+                                    <th>Nguồn</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="page" id="page-susceptibility">
+                <aside class="panel narrow">
+                    <h2>Bản đồ nhạy cảm</h2>
+                    <button id="create-susceptibility" type="button">Nạp LSM thật</button>
+                    <div id="susceptibility-info" class="result-box"></div>
+                    <h3>Raster đã nạp</h3>
+                    <div id="raster-list" class="compact-list"></div>
+                </aside>
+                <section class="map-card">
+                    <div id="map-host"></div>
+                </section>
+            </section>
+
+            <section class="page" id="page-settings">
+                <aside class="panel narrow">
+                    <h2>Setting</h2>
+                    <form id="settings-form">
+                        <label class="check-row">
+                            <input id="force-duplicate" type="checkbox" />
+                            <span>Tạo trùng điểm kiểm kê cũ</span>
+                        </label>
+                        <label for="tile-provider">Nguồn vệ tinh</label>
+                        <select id="tile-provider">
+                            <option value="esri">Esri World Imagery</option>
+                            <option value="google">Google satellite XYZ</option>
+                            <option value="custom">Custom XYZ tile</option>
+                        </select>
+                        <label for="custom-tile-url">Custom XYZ URL</label>
+                        <input id="custom-tile-url" type="text" placeholder="https://.../{z}/{x}/{y}.png" />
+                        <button type="submit">Lưu setting</button>
+                    </form>
+                    <div id="settings-info" class="result-box"></div>
+                </aside>
+                <section class="settings-card">
+                    <h2>Nguồn bản đồ vệ tinh</h2>
+                    <p>GEE hoặc Airbus dùng được khi bạn xuất được tile XYZ/WMS có token hợp lệ. Giao diện hiện hỗ trợ nhập custom XYZ URL.</p>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
