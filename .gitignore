@@ -57,3 +57,5 @@ data/
 
 # Large local training notebooks / experiments
 *.ipynb
+!train_extratrees.ipynb
+!train_segformb1.ipynb
