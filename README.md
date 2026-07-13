@@ -1,4 +1,6 @@
-# WebGIS Sat Lo Quang Tri Demo
+# DATN - WebGIS Sat Lo Quang Tri
+
+Ung dung hoc may trong nhan dang vung sat lo tu anh vien tham va xay dung ban do nhay cam sat lo.
 
 Workflow demo:
 
@@ -46,7 +48,15 @@ Run API:
 uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Mo giao dien:
+Run React frontend:
+
+```powershell
+cd frontend-react
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Legacy static frontend:
 
 ```text
 E:\DATN\frontend\index.html
